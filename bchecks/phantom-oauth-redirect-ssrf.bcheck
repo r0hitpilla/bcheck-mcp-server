@@ -1,0 +1,32 @@
+metadata:
+    language: v2-beta
+    name: "Phantom AI - OAuth callback open redirect"
+    description: "Tests the OAuth callback state param and iss param for open redirect and SSRF via Collaborator"
+    author: "BCheck-MCP"
+    tags: "oauth", "open-redirect", "ssrf", "phantom-ai"
+
+given request then
+    send payload replacing param value named "iss" with "https://evil.com"
+    if response.status_code is in (301, 302, 303, 307, 308) then
+        if response.headers["Location"] contains "evil.com" then
+            report issue
+                severity: high
+                confidence: firm
+                detail: "Open redirect via OAuth iss parameter: injecting https://evil.com caused a redirect to evil.com in the Location header of /auth/google/callback."
+                remediation: "Validate the iss parameter against a strict allowlist of trusted OAuth issuers."
+            end
+        end
+    end
+end
+
+given request then
+    send payload replacing param value named "iss" with {collaborator_payload}
+    if dns interaction then
+        report issue
+            severity: high
+            confidence: firm
+            detail: "SSRF via OAuth iss parameter: the server made an outbound DNS request to the Collaborator payload injected into the iss param on /auth/google/callback."
+            remediation: "Validate and whitelist allowed OAuth issuer URLs."
+        end
+    end
+end

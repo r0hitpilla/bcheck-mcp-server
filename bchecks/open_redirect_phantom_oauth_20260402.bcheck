@@ -1,0 +1,34 @@
+metadata:
+    language: v2-beta
+    name: "Open Redirect - Phantom AI OAuth"
+    description: "Open redirect tests for /auth/google/callback state parameter."
+    author: "BCheck-MCP"
+    tags: "open-redirect", "bcheck-mcp"
+
+given request then
+    send payload replacing each param value with "https://bcheck-mcp-canary.example.com/redirect"
+    if response.status_code is in (301, 302, 303, 307, 308) then
+        if response.headers["Location"] contains "bcheck-mcp-canary.example.com" then
+            report issue
+                severity: medium
+                confidence: firm
+                detail: "Open redirect confirmed: injected external URL appears in Location header."
+                remediation: "Whitelist allowed redirect destinations."
+            end
+        end
+    end
+end
+
+given request then
+    send payload replacing each param value with "//bcheck-mcp-canary.example.com"
+    if response.status_code is in (301, 302, 303, 307, 308) then
+        if response.headers["Location"] contains "bcheck-mcp-canary.example.com" then
+            report issue
+                severity: medium
+                confidence: firm
+                detail: "Open redirect via protocol-relative URL."
+                remediation: "Validate redirect URLs against a strict whitelist."
+            end
+        end
+    end
+end

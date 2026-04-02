@@ -1,0 +1,42 @@
+metadata:
+    language: v2-beta
+    name: "Path Traversal - Phantom AI Static"
+    description: "Path traversal tests for /static/ file serving endpoint."
+    author: "BCheck-MCP"
+    tags: "path-traversal", "lfi", "bcheck-mcp"
+
+given request then
+    send payload replacing each param value with "../../../../etc/passwd"
+    if response contains "root:x:0:0" or response contains "root:*:" then
+        report issue
+            severity: critical
+            confidence: firm
+            detail: "Path traversal confirmed: /etc/passwd content returned."
+            remediation: "Canonicalize file paths and reject '..' sequences."
+        end
+    end
+end
+
+given request then
+    send payload replacing each param value with "..%2F..%2F..%2Fetc%2Fpasswd"
+    if response contains "root:x:0:0" or response contains "root:*:" then
+        report issue
+            severity: critical
+            confidence: firm
+            detail: "Path traversal confirmed (URL-encoded)."
+            remediation: "URL-decode input before validating. Reject '..' after decoding."
+        end
+    end
+end
+
+given request then
+    send payload replacing each param value with "../../../../windows/win.ini"
+    if response contains "[extensions]" or response contains "; for 16-bit" then
+        report issue
+            severity: critical
+            confidence: firm
+            detail: "Path traversal confirmed: windows\\win.ini content returned."
+            remediation: "Canonicalize file paths and reject '..' sequences."
+        end
+    end
+end

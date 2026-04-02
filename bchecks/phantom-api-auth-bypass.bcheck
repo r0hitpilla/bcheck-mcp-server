@@ -1,0 +1,20 @@
+metadata:
+    language: v2-beta
+    name: "Phantom AI - API auth bypass"
+    description: "Tests /api/jobs for broken access control by sending requests without a session cookie and with a tampered session"
+    author: "BCheck-MCP"
+    tags: "auth-bypass", "idor", "api", "phantom-ai"
+
+given request then
+    send payload replacing cookie value named "session" with "invalid-session-token"
+    if response.status_code == 200 then
+        if response contains "job_id" then
+            report issue
+                severity: high
+                confidence: tentative
+                detail: "Possible authentication bypass on /api/jobs: an invalid session cookie still returned 200 OK with job data. The API endpoint may not properly validate session tokens."
+                remediation: "Enforce server-side session validation on all API endpoints. Return 401/403 for invalid sessions."
+            end
+        end
+    end
+end

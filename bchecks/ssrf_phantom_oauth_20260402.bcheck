@@ -1,0 +1,32 @@
+metadata:
+    language: v2-beta
+    name: "SSRF - Phantom AI OAuth/API"
+    description: "SSRF tests targeting OAuth callback and API parameters."
+    author: "BCheck-MCP"
+    tags: "ssrf", "bcheck-mcp"
+
+given request then
+    send payload replacing each param value with "http://169.254.169.254/latest/meta-data/"
+    if response contains "ami-id" or
+       response contains "instance-id" or
+       response contains "iam/security-credentials" then
+        report issue
+            severity: critical
+            confidence: firm
+            detail: "SSRF confirmed: AWS IMDSv1 metadata retrieved."
+            remediation: "Validate and whitelist URL destinations. Use IMDSv2."
+        end
+    end
+end
+
+given request then
+    send payload replacing each param value with {collaborator_payload}
+    if dns interaction then
+        report issue
+            severity: high
+            confidence: firm
+            detail: "SSRF confirmed via Burp Collaborator DNS interaction."
+            remediation: "Validate and whitelist allowed URL destinations."
+        end
+    end
+end

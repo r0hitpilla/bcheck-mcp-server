@@ -1,0 +1,58 @@
+metadata:
+    language: v2-beta
+    name: "IDOR - Phantom AI API"
+    description: "IDOR tests for /api/jobs endpoint and path-based ID manipulation."
+    author: "BCheck-MCP"
+    tags: "idor", "bola", "access-control", "bcheck-mcp"
+
+given request then
+    if {latest.url} matches ".*\/api\/jobs.*" then
+        send payload replacing param value named "job_id" with "1"
+        if response.status_code == 200 then
+            report issue
+                severity: medium
+                confidence: tentative
+                detail: "Possible IDOR: changing job_id to '1' returned HTTP 200. Verify whether the returned object belongs to a different user."
+                remediation: "Enforce object-level authorization checks on every resource access."
+            end
+        end
+    end
+end
+
+given request then
+    if {latest.url} matches ".*\/api\/jobs.*" then
+        send payload replacing param value named "job_id" with "2"
+        if response.status_code == 200 then
+            report issue
+                severity: medium
+                confidence: tentative
+                detail: "Possible IDOR: changing job_id to '2' returned HTTP 200. Verify whether the returned object belongs to a different user."
+                remediation: "Enforce object-level authorization checks on every resource access."
+            end
+        end
+    end
+end
+
+given request then
+    send payload replacing param value named "id" with "1"
+    if response.status_code == 200 then
+        report issue
+            severity: medium
+            confidence: tentative
+            detail: "Possible IDOR: changing id parameter to '1' returned HTTP 200."
+            remediation: "Enforce object-level authorization on every API endpoint."
+        end
+    end
+end
+
+given request then
+    send payload replacing param value named "user_id" with "1"
+    if response.status_code == 200 then
+        report issue
+            severity: medium
+            confidence: tentative
+            detail: "Possible IDOR: changing user_id parameter to '1' returned HTTP 200."
+            remediation: "Enforce object-level authorization on every API endpoint."
+        end
+    end
+end

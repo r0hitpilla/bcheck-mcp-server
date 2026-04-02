@@ -1,0 +1,48 @@
+metadata:
+    language: v2-beta
+    name: "SQLI - Phantom AI Login"
+    description: "SQL injection tests for POST /login username and password fields."
+    author: "BCheck-MCP"
+    tags: "sqli", "injection", "bcheck-mcp"
+
+given request then
+    send payload replacing each param value with "'"
+    if response contains "SQL syntax" or
+       response contains "mysql_fetch" or
+       response contains "ORA-" or
+       response contains "PostgreSQL" or
+       response contains "SQLITE_ERROR" or
+       response contains "Unclosed quotation mark" or
+       response contains "quoted string not properly terminated" then
+        report issue
+            severity: high
+            confidence: tentative
+            detail: "Possible SQL injection: database error triggered by single-quote payload."
+            remediation: "Use parameterised queries or prepared statements."
+        end
+    end
+end
+
+given request then
+    send payload replacing each param value with "' AND SLEEP(5)-- -"
+    if response time > 4500 then
+        report issue
+            severity: high
+            confidence: tentative
+            detail: "Possible time-based blind SQL injection via SLEEP(5)."
+            remediation: "Use parameterised queries or prepared statements."
+        end
+    end
+end
+
+given request then
+    send payload replacing each param value with "'; WAITFOR DELAY '0:0:5'-- -"
+    if response time > 4500 then
+        report issue
+            severity: high
+            confidence: tentative
+            detail: "Possible time-based blind SQL injection (MSSQL) via WAITFOR DELAY."
+            remediation: "Use parameterised queries or prepared statements."
+        end
+    end
+end

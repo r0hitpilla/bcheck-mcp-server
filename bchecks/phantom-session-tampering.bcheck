@@ -1,0 +1,30 @@
+metadata:
+    language: v2-beta
+    name: "Phantom AI - Session cookie tampering"
+    description: "Tests Flask session cookie deserialization by injecting malformed base64 and checking for server errors"
+    author: "BCheck-MCP"
+    tags: "session", "deserialization", "phantom-ai"
+
+given request then
+    send payload replacing cookie value named "session" with ".eJx7fAAAA.tampered.signature"
+    if response.status_code == 500 then
+        report issue
+            severity: medium
+            confidence: tentative
+            detail: "Server returned 500 when given a malformed Flask session cookie. This may indicate unsafe deserialization or insufficient error handling of session data."
+            remediation: "Ensure session deserialization errors are caught gracefully. Never expose stack traces. Consider using server-side sessions."
+        end
+    end
+end
+
+given request then
+    send payload replacing cookie value named "session" with "{{7*7}}"
+    if response contains "49" then
+        report issue
+            severity: critical
+            confidence: tentative
+            detail: "Possible server-side template injection via session cookie: the expression {{7*7}} evaluated to 49 in the response."
+            remediation: "Never pass user-controlled data directly into template engines."
+        end
+    end
+end
