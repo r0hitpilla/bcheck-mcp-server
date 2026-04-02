@@ -19,6 +19,7 @@ async def create_scan(
     scan_configurations: list[str] | None = None,
     resource_pool: str = "Default resource pool",
     application_logins: list[dict] | None = None,
+    bcheck_only: bool = True,
 ) -> dict:
     settings = get_settings()
 
@@ -30,6 +31,14 @@ async def create_scan(
             ),
             "allowed_targets": settings.allowed_targets,
         }
+
+    # Default to BChecks-only config — skip Burp's built-in audit checks
+    # so only the deployed custom .bcheck scripts run.
+    # User must create a saved config named "BChecks Only" in Burp:
+    #   Settings → Scanner → Scan configurations → New →
+    #   disable all built-in audit checks → Save as "BChecks Only"
+    if scan_configurations is None and bcheck_only:
+        scan_configurations = ["BChecks Only"]
 
     await asyncio.sleep(settings.bcheck_reload_wait)
 

@@ -100,6 +100,7 @@ def get_bcheck_syntax_guide_tool() -> str:
 @mcp.tool()
 async def create_scan_tool(
     target_url: str,
+    bcheck_only: bool = True,
     scan_configurations: list[str] | None = None,
     resource_pool: str = "Default resource pool",
     application_logins: list[dict] | None = None,
@@ -107,11 +108,23 @@ async def create_scan_tool(
     """
     Create an active scan job in Burp Suite Professional.
 
-    Automatically waits for Burp to hot-reload any deployed BCheck files before starting.
+    Automatically waits for Burp to hot-reload deployed BCheck files before starting.
+
+    By default (bcheck_only=True) the scan runs ONLY the deployed custom BCheck scripts
+    using a saved Burp config named "BChecks Only" — Burp's built-in audit checks are
+    skipped entirely. This is faster and avoids noisy default findings.
+
+    PREREQUISITE: create the "BChecks Only" config in Burp once:
+      Settings → Scanner → Scan configurations → New →
+      disable all built-in audit checks → Save as "BChecks Only"
+
+    Set bcheck_only=False to run BChecks + all Burp built-in checks (slow, noisy).
 
     Args:
         target_url: URL to scan (must be in ALLOWED_TARGETS env var if set).
-        scan_configurations: Burp scan config names e.g. ["Audit checks - all issues"].
+        bcheck_only: If True (default), only run deployed BCheck scripts. If False,
+                     also run Burp's full built-in audit suite.
+        scan_configurations: Override scan config names (ignores bcheck_only if set).
         resource_pool: Burp resource pool name.
         application_logins: Optional [{"username": "...", "password": "..."}] for auth scanning.
     """
@@ -120,6 +133,7 @@ async def create_scan_tool(
         scan_configurations=scan_configurations,
         resource_pool=resource_pool,
         application_logins=application_logins,
+        bcheck_only=bcheck_only,
     )
     return json.dumps(result, indent=2)
 
