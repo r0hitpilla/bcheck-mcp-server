@@ -1,342 +1,286 @@
-"""BCheck v2-beta DSL syntax reference for Claude to use when writing checks."""
+"""BCheck v2-beta DSL syntax reference — correct rules for Claude."""
 
 BCHECK_SYNTAX_GUIDE = '''
-# BCheck v2-beta DSL — Complete Syntax Reference
+# BCheck v2-beta — Correct Syntax Reference
 
-## File Structure
-
-Every .bcheck file has two sections: metadata block + one or more given...then...end blocks.
+## GOLDEN TEMPLATE
 
 ```
 metadata:
-    language: v2-beta
-    name: "Check Name Here"
-    description: "What this check does"
-    author: "BCheck-MCP"
-    tags: "tag1", "tag2"
+  language: v2-beta
+  name: "Check Name"
+  description: "Description"
+  author: "Author"
+  tags: "tag1", "tag2"
 
-given <scope> then
-    <conditions and actions>
-end
-```
-
-## Metadata Fields (all required)
-- `language: v2-beta`  — must be exactly this
-- `name: "..."`         — human-readable name shown in Burp UI
-- `description: "..."` — explanation of what the check tests
-- `author: "..."`      — author string
-- `tags: "t1", "t2"`  — optional comma-separated tags
-
-## Scope (the `given` clause)
-
-```
-given request then          # fires on every proxied request
-given response then         # fires on every proxied response
-given path then             # fires on path-based checks
-given insertion point then  # fires for each insertion point Burp finds
+given insertion point then
+  send payload:
+    replacing: "payload"
+  if {condition} then
+    report issue:
+      severity: high
+      confidence: tentative
+      detail: "Detail string."
+      remediation: "Remediation string."
+  end if
 ```
 
-## Sending Payloads
+## STRUCTURE RULES
 
-### Replace query/body param values
-```
-send payload replacing each param value with "<payload>"
-send payload replacing param value named "id" with "<payload>"
-send payload replacing param value named "search" with "<payload>"
-```
+1. **metadata block** — always first
+2. **define block** — optional, comes after metadata
+3. **given...then block** — ONE per file, NO closing keyword, ends at EOF
 
-### Replace JSON body param values
-```
-send payload replacing json param value named "username" with "<payload>"
-send payload replacing json param value named "url" with "<payload>"
-```
+## CLOSING KEYWORDS
 
-### Replace cookie values
-```
-send payload replacing cookie value named "session" with "<payload>"
-send payload replacing cookie value named "user_id" with "<payload>"
-```
+| Block | Closes with |
+|---|---|
+| `given...then` | **nothing** — ends at EOF |
+| `if...then` | `end if` |
+| `report issue:` | **nothing** — ends when `end if` is hit |
 
-### Replace header values
-```
-send payload replacing header value named "X-Forwarded-For" with "<payload>"
-send payload replacing header value named "Referer" with "<payload>"
-send payload replacing header value named "Origin" with "<payload>"
-```
+**NEVER write a bare `end` to close `given...then`.**
 
-### Replace entire request body (for XML/GraphQL/raw)
+## INSERTION POINT SCOPES
+
 ```
-send payload replacing request.body with "<full-body-payload>"
+given insertion point then          ← DEFAULT, covers all types
+given query insertion point then
+given body insertion point then
+given header insertion point then
+given cookie insertion point then
+given any insertion point then
 ```
 
-### Replace path segments
+## SEND PAYLOAD SYNTAX
+
 ```
-send payload replacing each numeric path segment matching "([0-9]+)" with increment
+send payload:
+  replacing: "your-payload"    ← replaces the insertion point value
 ```
 
-### Multiple replacements in one payload
 ```
-send payload replacing param value named "q" with "'-- -"
-```
-
-## Conditions
-
-### Response body contains
-```
-if response contains "SQL syntax" then
-if response contains "root:x:0:0" then
-if not response contains "Welcome" then
+send payload:
+  appending: "your-payload"    ← appends to the insertion point value
 ```
 
-### Response body contains multiple (OR)
+**NEVER write:** `send payload replacing each parameter value with ...`
+
+## RESPONSE REFERENCES
+
 ```
-if response contains "SQL syntax" or
-   response contains "mysql_fetch" or
-   response contains "ORA-" then
+latest.response.body        ← response body (wrap in {} in expressions)
+latest.response.duration    ← response time in milliseconds
 ```
 
-### Response body contains multiple (AND)
-```
-if response contains "error" and
-   response contains "database" then
-```
+**NEVER write:** `response.body` or `response.time` or `response time`
 
-### Response status code
-```
-if response.status_code == 200 then
-if response.status_code is in (301, 302, 303, 307, 308) then
-if response.status_code != 200 then
-```
+## CONDITIONS
 
-### Response time (milliseconds)
 ```
-if response time > 5000 then
-if response time < 500 then
-```
+if {to_lower(latest.response.body)} matches "pattern1|pattern2" then
 
-### Response headers
-```
-if response.headers["Location"] contains "evil.com" then
-if response.headers["Content-Type"] contains "application/json" then
-```
+if {latest.response.body} matches "root:x:0:0|root:\\*:" then
 
-### Response body length
-```
-if response.body.length > 0 then
-if response.body.length > 1000 then
-```
+if latest.response.duration > 4500 then
 
-### Request properties
-```
-if request.body contains "<?xml" then
-if request.headers["Content-Type"] contains "xml" then
-if {latest.url} matches ".*\\/api\\/.*" then
-```
-
-### Out-of-band (Burp Collaborator)
-```
 if dns interaction then
+
 if http interaction then
-if any interaction then
 ```
 
-### Regex matching
-```
-if response matches "error.*line [0-9]+" then
-if {latest.path} matches ".*\\/[0-9]+\\/.*" then
-```
+## TAGS
 
-## Report Issue Block
-
+Comma-separated quoted strings:
 ```
-report issue
-    severity: info          # info | low | medium | high | critical
-    confidence: tentative   # tentative | firm | certain
-    detail: "Finding detail shown in Burp dashboard. Include payload and evidence."
-    remediation: "How to fix this vulnerability."
-end
+tags: "sqli", "injection", "bcheck-mcp"
 ```
 
-## Collaborator Payloads
+**NEVER:** `tags: "sqli,injection"` (single string with commas inside)
 
-Use `{collaborator_payload}` as a literal placeholder — Burp substitutes the real URL:
+## COLLABORATOR
 
 ```
-send payload replacing param value named "url" with {collaborator_payload}
+send payload:
+  replacing: {collaborator_payload}
 if dns interaction then
-    report issue
-        severity: high
-        confidence: firm
-        detail: "SSRF via OOB DNS — Collaborator received DNS lookup."
-        remediation: "Whitelist allowed URL destinations."
-    end
-end
+  report issue:
+    severity: high
+    confidence: firm
+    detail: "OOB DNS interaction triggered."
+    remediation: "Validate and whitelist URL destinations."
+end if
 ```
 
-## Full Examples
+---
 
-### Error-based SQLi on a specific param
+## FULL EXAMPLES
+
+### Error-based SQLi
 ```
 metadata:
-    language: v2-beta
-    name: "SQLi - id param"
-    description: "Error-based SQL injection on the id parameter"
-    author: "BCheck-MCP"
-    tags: "sqli"
+  language: v2-beta
+  name: "SQLi - Error Based"
+  description: "Error-based SQL injection detection"
+  author: "BCheck-MCP"
+  tags: "sqli", "injection"
 
-given request then
-    send payload replacing param value named "id" with "'"
-    if response contains "SQL syntax" or
-       response contains "mysql_fetch" or
-       response contains "ORA-" or
-       response contains "Unclosed quotation mark" then
-        report issue
-            severity: high
-            confidence: tentative
-            detail: "Possible SQLi: single-quote triggered database error in response."
-            remediation: "Use parameterised queries."
-        end
-    end
-end
+given insertion point then
+  send payload:
+    replacing: "'"
+  if {to_lower(latest.response.body)} matches "sql syntax|mysql_fetch|ora-[0-9]+|postgresql|sqlite_error|unclosed quotation mark|quoted string not properly terminated" then
+    report issue:
+      severity: high
+      confidence: tentative
+      detail: "SQL error triggered by single-quote payload."
+      remediation: "Use parameterised queries."
+  end if
 ```
 
 ### Time-based blind SQLi
 ```
-given request then
-    send payload replacing param value named "search" with "' AND SLEEP(5)-- -"
-    if response time > 4500 then
-        report issue
-            severity: high
-            confidence: tentative
-            detail: "Possible time-based blind SQLi: SLEEP(5) caused response delay."
-            remediation: "Use parameterised queries."
-        end
-    end
-end
+metadata:
+  language: v2-beta
+  name: "SQLi - Time Based"
+  description: "Time-based blind SQL injection"
+  author: "BCheck-MCP"
+  tags: "sqli", "injection"
+
+given insertion point then
+  send payload:
+    replacing: "' AND SLEEP(5)-- -"
+  if latest.response.duration > 4500 then
+    report issue:
+      severity: high
+      confidence: tentative
+      detail: "Time-based blind SQLi: SLEEP(5) caused response delay."
+      remediation: "Use parameterised queries."
+  end if
 ```
 
-### SSRF via JSON body param
+### Reflected XSS
 ```
-given request then
-    if request.headers["Content-Type"] contains "json" then
-        send payload replacing json param value named "webhook_url" with {collaborator_payload}
-        if dns interaction then
-            report issue
-                severity: high
-                confidence: firm
-                detail: "SSRF: OOB DNS triggered by injecting Collaborator URL into webhook_url JSON param."
-                remediation: "Validate and whitelist URL destinations."
-            end
-        end
-    end
-end
+metadata:
+  language: v2-beta
+  name: "XSS - Reflected"
+  description: "Reflected XSS detection"
+  author: "BCheck-MCP"
+  tags: "xss", "injection"
+
+given insertion point then
+  send payload:
+    replacing: "<bcheckxss>\\\">'><bcheckxss>"
+  if {latest.response.body} matches "<bcheckxss>" then
+    report issue:
+      severity: high
+      confidence: tentative
+      detail: "Reflected XSS: injected marker reflected unescaped."
+      remediation: "HTML-encode all output. Apply CSP."
+  end if
 ```
 
-### Reflected XSS on query param
+### SSRF with Collaborator
 ```
-given request then
-    send payload replacing param value named "q" with "<bcheckxss-probe>\\\">'><bcheckxss-probe>"
-    if response contains "<bcheckxss-probe>" then
-        report issue
-            severity: high
-            confidence: tentative
-            detail: "Reflected XSS: injected marker reflected unescaped in HTML response."
-            remediation: "HTML-encode all output. Apply CSP."
-        end
-    end
-end
+metadata:
+  language: v2-beta
+  name: "SSRF - OOB"
+  description: "SSRF via Burp Collaborator"
+  author: "BCheck-MCP"
+  tags: "ssrf"
+
+given insertion point then
+  send payload:
+    replacing: {collaborator_payload}
+  if dns interaction then
+    report issue:
+      severity: high
+      confidence: firm
+      detail: "SSRF: OOB DNS triggered by Collaborator payload."
+      remediation: "Whitelist allowed URL destinations."
+  end if
 ```
 
-### Path traversal on file param
+### Path Traversal
 ```
-given request then
-    send payload replacing param value named "file" with "../../../../etc/passwd"
-    if response contains "root:x:0:0" or response contains "root:*:" then
-        report issue
-            severity: critical
-            confidence: firm
-            detail: "Path traversal: /etc/passwd read via file parameter."
-            remediation: "Canonicalize paths, reject sequences containing '..'."
-        end
-    end
-end
+metadata:
+  language: v2-beta
+  name: "Path Traversal"
+  description: "LFI via path traversal"
+  author: "BCheck-MCP"
+  tags: "path-traversal", "lfi"
+
+given insertion point then
+  send payload:
+    replacing: "../../../../etc/passwd"
+  if {latest.response.body} matches "root:x:0:0|root:\\*:" then
+    report issue:
+      severity: critical
+      confidence: firm
+      detail: "Path traversal: /etc/passwd returned."
+      remediation: "Canonicalize paths. Reject '..' sequences."
+  end if
 ```
 
-### IDOR via numeric path segment
+### Command Injection (blind, time-based)
 ```
-given request then
-    if {latest.path} matches ".*\\/[0-9]+(\\/|$).*" then
-        send payload replacing param value named "user_id" with "2"
-        if response.status_code == 200 then
-            if response.body.length > 0 then
-                report issue
-                    severity: medium
-                    confidence: tentative
-                    detail: "Possible IDOR: changed user_id returned 200 with content. Verify ownership."
-                    remediation: "Enforce object-level authorization."
-                end
-            end
-        end
-    end
-end
+metadata:
+  language: v2-beta
+  name: "CMDi - Blind Time Based"
+  description: "Blind command injection via sleep"
+  author: "BCheck-MCP"
+  tags: "cmdi", "rce"
+
+given insertion point then
+  send payload:
+    replacing: "; sleep 5"
+  if latest.response.duration > 4500 then
+    report issue:
+      severity: high
+      confidence: tentative
+      detail: "Blind command injection: sleep 5 caused delay."
+      remediation: "Never pass user input to shell commands."
+  end if
 ```
 
-### XXE on XML body
+### Multiple checks in one file (multiple send/if inside one given...then)
 ```
-given request then
-    if request.body contains "<?xml" then
-        send payload replacing request.body with "<?xml version=\\"1.0\\"?><!DOCTYPE foo [<!ENTITY xxe SYSTEM \\"file:///etc/passwd\\">]><foo>&xxe;</foo>"
-        if response contains "root:x:0:0" then
-            report issue
-                severity: critical
-                confidence: firm
-                detail: "XXE confirmed: /etc/passwd returned via external entity injection."
-                remediation: "Disable external entity processing in XML parser."
-            end
-        end
-    end
-end
+metadata:
+  language: v2-beta
+  name: "SQLi - Full"
+  description: "Error-based and time-based SQLi"
+  author: "BCheck-MCP"
+  tags: "sqli", "injection"
+
+given insertion point then
+  send payload:
+    replacing: "'"
+  if {to_lower(latest.response.body)} matches "sql syntax|mysql_fetch|ora-[0-9]+" then
+    report issue:
+      severity: high
+      confidence: tentative
+      detail: "Error-based SQLi detected."
+      remediation: "Use parameterised queries."
+  end if
+  send payload:
+    replacing: "' AND SLEEP(5)-- -"
+  if latest.response.duration > 4500 then
+    report issue:
+      severity: high
+      confidence: tentative
+      detail: "Time-based blind SQLi detected."
+      remediation: "Use parameterised queries."
+  end if
 ```
 
-### Command injection (blind, time-based)
-```
-given request then
-    send payload replacing param value named "host" with "127.0.0.1; sleep 5"
-    if response time > 4500 then
-        report issue
-            severity: high
-            confidence: tentative
-            detail: "Possible blind command injection: sleep 5 caused response delay."
-            remediation: "Never pass user input to shell commands."
-        end
-    end
-end
-```
+## CHECKLIST BEFORE WRITING
 
-### Header injection (X-Forwarded-For)
-```
-given request then
-    send payload replacing header value named "X-Forwarded-For" with "127.0.0.1"
-    if response contains "Welcome admin" or
-       response contains "internal only" then
-        report issue
-            severity: high
-            confidence: tentative
-            detail: "Possible IP restriction bypass via X-Forwarded-For header spoofing."
-            remediation: "Do not trust X-Forwarded-For for access control."
-        end
-    end
-end
-```
-
-## Writing Tips for Claude
-
-1. **Be specific**: Target named params (`replacing param value named "id"`) not all params.
-2. **Match body format**: JSON bodies use `json param value named`, form bodies use `param value named`.
-3. **Layer checks**: Error-based + time-based in the same file (two `given...end` blocks).
-4. **Use Collaborator** for SSRF, XXE OOB, blind CMDI where direct response inspection fails.
-5. **Escape quotes** in DSL strings with `\\"` inside double-quoted strings.
-6. **Short canary values**: Use distinctive strings like `bchkprobe123` so detection is precise.
-7. **Conditional guards**: Wrap XML/JSON-specific payloads in `if request.headers["Content-Type"] contains "..."` guards.
-8. **Regex for path IDs**: Use `{latest.path} matches ".*\\/[0-9]+.*"` before IDOR attempts.
+- [ ] ONE `given...then` block only — no second given block
+- [ ] `given...then` has NO closing keyword — it ends at EOF
+- [ ] Every `if...then` has a matching `end if`
+- [ ] `report issue:` has NO closing keyword
+- [ ] `send payload:` uses colon + indented `replacing:` or `appending:`
+- [ ] Response body: `latest.response.body` (not `response.body`)
+- [ ] Response time: `latest.response.duration` (not `response time`)
+- [ ] Tags: `"tag1", "tag2"` (not `"tag1,tag2"`)
+- [ ] Use `{...}` around expressions: `{to_lower(latest.response.body)}`
 '''

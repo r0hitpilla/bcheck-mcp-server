@@ -1,18 +1,17 @@
 metadata:
-    language: v2-beta
-    name: "Phantom AI - Login XSS username"
-    description: "Reflected XSS on the username field of the POST /login form - checks if input is reflected unescaped in the error response"
-    author: "BCheck-MCP"
-    tags: "xss", "login", "phantom-ai"
+  language: v2-beta
+  name: "XSS - Phantom Login Stored"
+  description: "Stored XSS probe for Phantom AI login and registration."
+  author: "BCheck-MCP"
+  tags: "xss", "stored-xss", "bcheck-mcp"
 
-given request then
-    send payload replacing param value named "username" with "<bchk-xss>\">'><img src=x onerror=bchk>"
-    if response contains "<bchk-xss>" then
-        report issue
-            severity: high
-            confidence: tentative
-            detail: "Reflected XSS: the injected marker <bchk-xss> was reflected unescaped in the HTML response of POST /login. The username value is rendered in the error message without proper encoding."
-            remediation: "HTML-encode all user-supplied output. Implement a strict CSP."
-        end
-    end
-end
+given insertion point then
+  send payload:
+    replacing: "<img src=x onerror=alert(1)>"
+  if {latest.response.body} matches "<img src=x onerror=alert" then
+    report issue:
+      severity: high
+      confidence: tentative
+      detail: "Possible stored/reflected XSS: img onerror payload reflected unescaped."
+      remediation: "HTML-encode all user-supplied output. Apply a Content Security Policy."
+  end if

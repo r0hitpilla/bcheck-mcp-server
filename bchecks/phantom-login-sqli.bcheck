@@ -1,35 +1,26 @@
 metadata:
-    language: v2-beta
-    name: "Phantom AI - Login SQLi username"
-    description: "Error-based and time-based SQL injection on the username parameter of the POST /login form"
-    author: "BCheck-MCP"
-    tags: "sqli", "login", "phantom-ai"
+  language: v2-beta
+  name: "SQLi - Phantom Login Aggressive"
+  description: "Aggressive SQL injection payloads for Phantom AI login."
+  author: "BCheck-MCP"
+  tags: "sqli", "injection", "bcheck-mcp"
 
-given request then
-    send payload replacing param value named "username" with "' OR 1=1-- -"
-    if response contains "SQL syntax" or
-       response contains "mysql_fetch" or
-       response contains "ORA-" or
-       response contains "Unclosed quotation mark" or
-       response contains "sqlite3.OperationalError" or
-       response contains "near \"\":" then
-        report issue
-            severity: high
-            confidence: tentative
-            detail: "Possible error-based SQLi on the username parameter of POST /login. A single quote or SQL keyword triggered a database error in the response."
-            remediation: "Use parameterised queries for all database interactions."
-        end
-    end
-end
-
-given request then
-    send payload replacing param value named "username" with "admin' AND (SELECT 1 FROM (SELECT SLEEP(5))a)-- -"
-    if response time > 4500 then
-        report issue
-            severity: high
-            confidence: tentative
-            detail: "Possible time-based blind SQLi on username param of POST /login. SLEEP(5) caused a response delay exceeding 4.5 seconds."
-            remediation: "Use parameterised queries for all database interactions."
-        end
-    end
-end
+given insertion point then
+  send payload:
+    replacing: "' OR '1'='1"
+  if {to_lower(latest.response.body)} matches "welcome|dashboard|logged in|invalid" then
+    report issue:
+      severity: high
+      confidence: tentative
+      detail: "Possible SQL injection: OR-based payload changed application response."
+      remediation: "Use parameterised queries or prepared statements."
+  end if
+  send payload:
+    replacing: "admin'-- -"
+  if {to_lower(latest.response.body)} matches "welcome|dashboard|logged in" then
+    report issue:
+      severity: high
+      confidence: tentative
+      detail: "Possible SQL authentication bypass: comment payload changed login response."
+      remediation: "Use parameterised queries or prepared statements."
+  end if

@@ -1,30 +1,26 @@
 metadata:
-    language: v2-beta
-    name: "XSS - Phantom AI Login"
-    description: "XSS tests for POST /login reflected error messages."
-    author: "BCheck-MCP"
-    tags: "xss", "injection", "bcheck-mcp"
+  language: v2-beta
+  name: "XSS - Phantom AI Login"
+  description: "Reflected XSS tests for POST /login error messages."
+  author: "BCheck-MCP"
+  tags: "xss", "injection", "bcheck-mcp"
 
-given request then
-    send payload replacing each param value with "<bcheckxss>\">'><bcheckxss>"
-    if response contains "<bcheckxss>" then
-        report issue
-            severity: high
-            confidence: tentative
-            detail: "Possible reflected XSS: injected marker reflected unescaped."
-            remediation: "HTML-encode all user-supplied output. Apply a Content Security Policy."
-        end
-    end
-end
-
-given request then
-    send payload replacing each param value with "javascript:bcheckxss(1)"
-    if response contains "javascript:bcheckxss" then
-        report issue
-            severity: medium
-            confidence: tentative
-            detail: "Possible XSS via javascript: URI scheme reflected in response."
-            remediation: "Validate and sanitize URL parameters. Block javascript: scheme."
-        end
-    end
-end
+given insertion point then
+  send payload:
+    replacing: "<bcheckxss>\">'><bcheckxss>"
+  if {latest.response.body} matches "<bcheckxss>" then
+    report issue:
+      severity: high
+      confidence: tentative
+      detail: "Possible reflected XSS: injected marker reflected unescaped in login error response."
+      remediation: "HTML-encode all user-supplied output. Apply a Content Security Policy."
+  end if
+  send payload:
+    replacing: "javascript:bcheckxss(1)"
+  if {latest.response.body} matches "javascript:bcheckxss" then
+    report issue:
+      severity: medium
+      confidence: tentative
+      detail: "Possible XSS via javascript: URI scheme reflected in response."
+      remediation: "Validate and sanitize URL parameters. Block javascript: scheme in href/src attributes."
+  end if
