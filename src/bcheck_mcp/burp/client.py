@@ -75,7 +75,9 @@ class BurpClient:
             "resource_pool_name": resource_pool_name,
         }
         if scan_configurations:
-            body["scan_configurations"] = [{"name": n} for n in scan_configurations]
+            body["scan_configurations"] = [
+                {"type": "NamedConfiguration", "name": n} for n in scan_configurations
+            ]
         if application_logins:
             body["application_logins"] = application_logins
 
