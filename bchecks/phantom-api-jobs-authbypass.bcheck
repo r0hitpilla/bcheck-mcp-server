@@ -1,0 +1,17 @@
+metadata:
+  language: v2-beta
+  name: "Phantom AI - API Jobs Unauthenticated Access"
+  description: "Checks whether /api/jobs returns job data with an invalid session cookie (auth bypass)"
+  author: "BCheck-MCP"
+  tags: "auth-bypass", "idor", "api", "bcheck-mcp"
+
+given cookie insertion point then
+  send payload:
+    replacing: "invalid_session_token"
+  if {latest.response.body} matches "job_id|target|module" then
+    report issue:
+      severity: high
+      confidence: firm
+      detail: "GET /api/jobs returned job data (job_id, target, module fields) with an invalid session token. Potential authentication bypass or missing session validation."
+      remediation: "Enforce server-side session validation on all API endpoints. Return 401/403 for invalid or missing sessions."
+  end if

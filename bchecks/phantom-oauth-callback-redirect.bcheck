@@ -1,0 +1,17 @@
+metadata:
+  language: v2-beta
+  name: "Phantom AI - OAuth Callback State Param Open Redirect"
+  description: "Tests /auth/google/callback iss and state params for open redirect via response reflection"
+  author: "BCheck-MCP"
+  tags: "oauth", "open-redirect", "bcheck-mcp"
+
+given query insertion point then
+  send payload:
+    replacing: "https://evil.com"
+  if {latest.response.body} matches "evil\\.com" then
+    report issue:
+      severity: high
+      confidence: firm
+      detail: "Open redirect via OAuth callback query param: evil.com reflected in response. Could be abused to steal OAuth codes or tokens."
+      remediation: "Strictly validate the iss/state parameter against the expected Google issuer URL. Never reflect user-supplied values into redirect headers or response body."
+  end if

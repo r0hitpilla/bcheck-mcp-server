@@ -1,0 +1,17 @@
+metadata:
+  language: v2-beta
+  name: "Phantom AI - Dashboard Auth Bypass (No Session)"
+  description: "Checks if /dashboard is accessible with an empty/invalid session cookie"
+  author: "BCheck-MCP"
+  tags: "auth-bypass", "access-control", "bcheck-mcp"
+
+given cookie insertion point then
+  send payload:
+    replacing: ""
+  if {to_lower(latest.response.body)} matches "red team|phantom|ai scanner|module" then
+    report issue:
+      severity: critical
+      confidence: tentative
+      detail: "Dashboard content (Red Team, AI Scanner or module keywords) returned with empty session cookie. Potential authentication bypass."
+      remediation: "Enforce mandatory session validation before serving any authenticated page. Redirect unauthenticated requests to /login."
+  end if

@@ -1,0 +1,26 @@
+metadata:
+  language: v2-beta
+  name: "Phantom AI - Login Time-Based Blind SQLi"
+  description: "Tests POST /login for time-based blind SQL injection via SLEEP and pg_sleep"
+  author: "BCheck-MCP"
+  tags: "sqli", "blind", "auth", "bcheck-mcp"
+
+given body insertion point then
+  send payload:
+    replacing: "' AND SLEEP(5)-- -"
+  if latest.response.duration > 4500 then
+    report issue:
+      severity: high
+      confidence: tentative
+      detail: "Possible time-based blind SQLi: SLEEP(5) payload caused >4.5s delay on login endpoint."
+      remediation: "Use parameterised queries. Never concatenate user input into SQL strings."
+  end if
+  send payload:
+    replacing: "' AND pg_sleep(5)-- -"
+  if latest.response.duration > 4500 then
+    report issue:
+      severity: high
+      confidence: tentative
+      detail: "Possible time-based blind SQLi (PostgreSQL): pg_sleep(5) caused >4.5s delay on login endpoint."
+      remediation: "Use parameterised queries. Never concatenate user input into SQL strings."
+  end if
