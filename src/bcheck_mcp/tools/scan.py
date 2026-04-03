@@ -3,26 +3,10 @@
 from __future__ import annotations
 
 import asyncio
-import json
 from datetime import datetime, timezone
 
 from bcheck_mcp.burp.client import BurpAPIError, BurpClient
 from bcheck_mcp.config import get_settings
-
-# Inline scan configuration that disables all Burp built-in audit checks
-# and runs only extension/BCheck checks. Sent as CustomConfiguration so no
-# named config needs to exist in the Burp UI.
-_BCHECK_ONLY_CONFIG: dict = {
-    "type": "CustomConfiguration",
-    "config": json.dumps({
-        "scanner": {
-            "audit_checks": {
-                "burp_built_in_checks_enabled": False,
-                "extension_checks_enabled": True,
-            }
-        }
-    }),
-}
 
 
 def _make_client() -> BurpClient:
@@ -55,9 +39,9 @@ async def create_scan(
             {"type": "NamedConfiguration", "name": n} for n in scan_configurations
         ]
     elif bcheck_only:
-        # Use inline CustomConfiguration: disables built-in checks, runs BChecks only.
-        # No named config needs to exist in Burp UI — works out of the box.
-        config_dicts = [_BCHECK_ONLY_CONFIG]
+        # Use the "BChecks only" named scan configuration created in Burp UI:
+        # Scanner → Scan configurations → New → Audit checks → Extensions only → Save as "BChecks only"
+        config_dicts = [{"type": "NamedConfiguration", "name": "BChecks only"}]
     else:
         config_dicts = None
 
