@@ -32,13 +32,11 @@ async def create_scan(
             "allowed_targets": settings.allowed_targets,
         }
 
-    # Default to BChecks-only config — skip Burp's built-in audit checks
-    # so only the deployed custom .bcheck scripts run.
-    # User must create a saved config named "BChecks Only" in Burp:
-    #   Settings → Scanner → Scan configurations → New →
-    #   disable all built-in audit checks → Save as "BChecks Only"
+    # Default to "Audit checks - extensions only" — a built-in Burp config that
+    # runs ONLY extension-provided checks (BChecks) and skips all built-in
+    # Burp audit checks. No user setup required.
     if scan_configurations is None and bcheck_only:
-        scan_configurations = ["BChecks Only"]
+        scan_configurations = ["Audit checks - extensions only"]
 
     await asyncio.sleep(settings.bcheck_reload_wait)
 

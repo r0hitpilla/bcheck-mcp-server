@@ -110,13 +110,9 @@ async def create_scan_tool(
 
     Automatically waits for Burp to hot-reload deployed BCheck files before starting.
 
-    By default (bcheck_only=True) the scan runs ONLY the deployed custom BCheck scripts
-    using a saved Burp config named "BChecks Only" — Burp's built-in audit checks are
-    skipped entirely. This is faster and avoids noisy default findings.
-
-    PREREQUISITE: create the "BChecks Only" config in Burp once:
-      Settings → Scanner → Scan configurations → New →
-      disable all built-in audit checks → Save as "BChecks Only"
+    By default (bcheck_only=True) uses Burp's built-in "Audit checks - extensions only"
+    configuration — runs ONLY the deployed custom BCheck scripts, skips all Burp
+    built-in audit checks. No setup required, works out of the box.
 
     Set bcheck_only=False to run BChecks + all Burp built-in checks (slow, noisy).
 
