@@ -56,7 +56,7 @@ class BurpClient:
     async def create_scan(
         self,
         urls: list[str],
-        scan_configurations: list[str] | None = None,
+        scan_configurations: list[dict] | None = None,
         resource_pool_name: str = "Default resource pool",
         application_logins: list[dict[str, str]] | None = None,
     ) -> dict[str, Any]:
@@ -75,9 +75,7 @@ class BurpClient:
             "resource_pool_name": resource_pool_name,
         }
         if scan_configurations:
-            body["scan_configurations"] = [
-                {"type": "NamedConfiguration", "name": n} for n in scan_configurations
-            ]
+            body["scan_configurations"] = scan_configurations
         if application_logins:
             body["application_logins"] = application_logins
 

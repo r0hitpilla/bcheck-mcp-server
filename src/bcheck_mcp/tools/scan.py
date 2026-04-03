@@ -3,10 +3,26 @@
 from __future__ import annotations
 
 import asyncio
+import json
 from datetime import datetime, timezone
 
 from bcheck_mcp.burp.client import BurpAPIError, BurpClient
 from bcheck_mcp.config import get_settings
+
+# Inline scan configuration that disables all Burp built-in audit checks
+# and runs only extension/BCheck checks. Sent as CustomConfiguration so no
+# named config needs to exist in the Burp UI.
+_BCHECK_ONLY_CONFIG: dict = {
+    "type": "CustomConfiguration",
+    "config": json.dumps({
+        "scanner": {
+            "audit_checks": {
+                "burp_built_in_checks_enabled": False,
+                "extension_checks_enabled": True,
+            }
+        }
+    }),
+}
 
 
 def _make_client() -> BurpClient:
@@ -32,10 +48,18 @@ async def create_scan(
             "allowed_targets": settings.allowed_targets,
         }
 
-    # Default to "MCP-Only" — a custom Burp scan configuration that runs
-    # only BChecks tagged for MCP, skipping all built-in audit checks.
-    if scan_configurations is None and bcheck_only:
-        scan_configurations = ["MCP-Only"]
+    # Build configuration dicts for the Burp API
+    if scan_configurations is not None:
+        # Caller provided explicit named configurations — pass them through
+        config_dicts: list[dict] | None = [
+            {"type": "NamedConfiguration", "name": n} for n in scan_configurations
+        ]
+    elif bcheck_only:
+        # Use inline CustomConfiguration: disables built-in checks, runs BChecks only.
+        # No named config needs to exist in Burp UI — works out of the box.
+        config_dicts = [_BCHECK_ONLY_CONFIG]
+    else:
+        config_dicts = None
 
     await asyncio.sleep(settings.bcheck_reload_wait)
 
@@ -43,7 +67,7 @@ async def create_scan(
     try:
         result = await client.create_scan(
             urls=[target_url],
-            scan_configurations=scan_configurations or None,
+            scan_configurations=config_dicts,
             resource_pool_name=resource_pool,
             application_logins=application_logins or None,
         )
