@@ -110,9 +110,9 @@ async def create_scan_tool(
 
     Automatically waits for Burp to hot-reload deployed BCheck files before starting.
 
-    By default (bcheck_only=True) uses Burp's built-in "Audit checks - extensions only"
-    configuration — runs ONLY the deployed custom BCheck scripts, skips all Burp
-    built-in audit checks. No setup required, works out of the box.
+    By default (bcheck_only=True) uses the custom "MCP-Only" Burp scan configuration —
+    runs ONLY the deployed custom BCheck scripts tagged for MCP, skips all Burp
+    built-in audit checks.
 
     Set bcheck_only=False to run BChecks + all Burp built-in checks (slow, noisy).
 

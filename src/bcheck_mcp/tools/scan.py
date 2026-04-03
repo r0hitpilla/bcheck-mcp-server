@@ -32,11 +32,10 @@ async def create_scan(
             "allowed_targets": settings.allowed_targets,
         }
 
-    # Default to "Audit checks - extensions only" — a built-in Burp config that
-    # runs ONLY extension-provided checks (BChecks) and skips all built-in
-    # Burp audit checks. No user setup required.
+    # Default to "MCP-Only" — a custom Burp scan configuration that runs
+    # only BChecks tagged for MCP, skipping all built-in audit checks.
     if scan_configurations is None and bcheck_only:
-        scan_configurations = ["Audit checks - extensions only"]
+        scan_configurations = ["MCP-Only"]
 
     await asyncio.sleep(settings.bcheck_reload_wait)
 
