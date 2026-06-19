@@ -1,3 +1,5 @@
+[![MseeP.ai Security Assessment Badge](https://mseep.net/pr/r0hitpilla-bcheck-mcp-server-badge.png)](https://mseep.ai/app/r0hitpilla-bcheck-mcp-server)
+
 # Burp BChecks MCP Server
 
 Autonomous BCheck security researcher for Claude Desktop. Reads real HTTP traffic from Burp Suite proxy history, writes custom BCheck DSL scripts targeting exact injection points, deploys them, and runs active scans.
